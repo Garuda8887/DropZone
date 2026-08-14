@@ -1,7 +1,5 @@
 # DropZone
 
-![DropZone Connect Screen](assets/connect-screen.png)
-
 DropZone is a lightweight, cross-platform web application that allows two devices to securely and quickly exchange files directly through their web browsers. 
 
 It leverages **WebRTC** for peer-to-peer (P2P) file transfer, meaning files are sent directly between devices and are never uploaded to or stored on a server.
@@ -13,14 +11,6 @@ It leverages **WebRTC** for peer-to-peer (P2P) file transfer, meaning files are 
 - **No File Size Limits:** Transfer files of any size without server restrictions.
 - **Multiple Files Queueing:** Drag and drop multiple files to send them sequentially.
 - **Sleek UI:** Features a beautiful dark-mode interface with a circular progress indicator.
-
-## Screenshots
-
-### Generating a Room Code
-![Generating Room Code](assets/room-code.png)
-
-### Transferring Files
-![Transfer Screen](assets/transfer-screen.png)
 
 ## How it Works
 1. **Device 1 (Sender)** opens the app and clicks **"Generate Room Code"**.
