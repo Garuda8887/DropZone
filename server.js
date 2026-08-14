@@ -21,7 +21,20 @@ io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
 
     // Handle joining a room
+    let joinAttempts = 0;
     socket.on('join-room', (roomId) => {
+        // ponytail: per-socket cap, not per-IP; good enough to kill single-connection brute force
+        joinAttempts++;
+        if (joinAttempts > 20) {
+            socket.disconnect(true);
+            return;
+        }
+
+        if (typeof roomId !== 'string' || !/^\d{4}$/.test(roomId)) {
+            socket.emit('room-full', roomId);
+            return;
+        }
+
         // Find if room exists and get number of clients
         const clients = io.sockets.adapter.rooms.get(roomId);
         const numClients = clients ? clients.size : 0;

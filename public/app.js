@@ -31,6 +31,9 @@ let currentRoom = null;
 let receiveBuffer = [];
 let receivedSize = 0;
 let incomingFileInfo = null;
+let pendingChunks = [];
+let pendingSize = 0;
+const FLUSH_THRESHOLD = 4 * 1024 * 1024; // 4MB
 
 // File Transfer State (Sending)
 let fileQueue = [];
@@ -81,6 +84,7 @@ socket.on('peer-joined', (peerId) => {
 });
 
 socket.on('room-full', () => {
+    btnCreateRoom.disabled = false;
     showError('Room is full (max 2 devices).');
 });
 
@@ -147,9 +151,13 @@ function setupWebRTC() {
     }
 }
 
+// ponytail: fixed low-water mark; tune if chunkSize ever changes drastically
+const BUFFERED_AMOUNT_LOW_THRESHOLD = 1024 * 1024; // 1MB
+
 function setupDataChannel() {
     dataChannel.binaryType = 'arraybuffer';
-    
+    dataChannel.bufferedAmountLowThreshold = BUFFERED_AMOUNT_LOW_THRESHOLD;
+
     dataChannel.onopen = () => {
         console.log('Data channel open');
         dropzone.style.opacity = '1';
@@ -163,6 +171,8 @@ function setupDataChannel() {
             if (meta.type === 'file-start') {
                 incomingFileInfo = meta;
                 receiveBuffer = [];
+                pendingChunks = [];
+                pendingSize = 0;
                 receivedSize = 0;
                 
                 progressContainer.classList.remove('hidden');
@@ -173,9 +183,20 @@ function setupDataChannel() {
             }
         } else {
             // Binary chunk
-            receiveBuffer.push(event.data);
+            pendingChunks.push(event.data);
+            pendingSize += event.data.byteLength;
             receivedSize += event.data.byteLength;
-            
+
+            // ponytail: flush raw ArrayBuffers into a Blob periodically so peak
+            // JS-heap usage is bounded by FLUSH_THRESHOLD, not the whole file;
+            // real fix would stream to disk (File System Access API) if this
+            // still isn't enough for very large files
+            if (pendingSize >= FLUSH_THRESHOLD) {
+                receiveBuffer.push(new Blob(pendingChunks));
+                pendingChunks = [];
+                pendingSize = 0;
+            }
+
             if (incomingFileInfo) {
                 const percent = (receivedSize / incomingFileInfo.size) * 100;
                 updateProgressUI(percent);
@@ -273,7 +294,14 @@ function processQueue() {
         updateProgressUI(percent);
 
         if (offset < file.size) {
-            readSlice(offset);
+            if (dataChannel.bufferedAmount > BUFFERED_AMOUNT_LOW_THRESHOLD) {
+                dataChannel.onbufferedamountlow = () => {
+                    dataChannel.onbufferedamountlow = null;
+                    readSlice(offset);
+                };
+            } else {
+                readSlice(offset);
+            }
         } else {
             // Done
             dataChannel.send(JSON.stringify({ type: 'file-done' }));
@@ -304,16 +332,32 @@ function processQueue() {
 // --- File Receiving Logic ---
 
 function finishDownload() {
+    if (pendingChunks.length > 0) {
+        receiveBuffer.push(new Blob(pendingChunks));
+        pendingChunks = [];
+        pendingSize = 0;
+    }
     const blob = new Blob(receiveBuffer, { type: incomingFileInfo.fileType });
     const url = URL.createObjectURL(blob);
     
     // Add to UI
     receivedFilesContainer.classList.remove('hidden');
     const li = document.createElement('li');
-    li.innerHTML = `
-        <span>${incomingFileInfo.name} <small>(${(incomingFileInfo.size/1024/1024).toFixed(2)} MB)</small></span>
-        <a href="${url}" download="${incomingFileInfo.name}" class="download-link">Download</a>
-    `;
+
+    const span = document.createElement('span');
+    span.textContent = `${incomingFileInfo.name} `;
+    const small = document.createElement('small');
+    small.textContent = `(${(incomingFileInfo.size/1024/1024).toFixed(2)} MB)`;
+    span.appendChild(small);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = incomingFileInfo.name;
+    link.className = 'download-link';
+    link.textContent = 'Download';
+
+    li.appendChild(span);
+    li.appendChild(link);
     fileList.prepend(li);
     
     statusText.textContent = "File received!";
