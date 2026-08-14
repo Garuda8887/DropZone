@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DropZone | P2P File Exchange</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="url(#paint0_linear)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M8 12L12 8L16 12" stroke="url(#paint0_linear)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 16V8" stroke="url(#paint0_linear)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs>
+                        <linearGradient id="paint0_linear" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#FF3366"/>
+                            <stop offset="1" stop-color="#FF9933"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <h1>DropZone</h1>
+            </div>
+            <p class="tagline">Secure, cross-platform P2P file transfer.</p>
+        </header>
+
+        <main id="app-content">
+            <!-- Screen 1: Connect -->
+            <div id="screen-connect" class="screen active">
+                <div class="card create-card">
+                    <h2>Send a File</h2>
+                    <p>Generate a secure room code to share with the receiver.</p>
+                    <button id="btn-create-room" class="btn primary">Generate Room Code</button>
+                    <div id="room-code-display" class="hidden">
+                        <p>Share this code:</p>
+                        <h3 id="generated-code" class="code-text">----</h3>
+                        <p class="status-text blink">Waiting for receiver to join...</p>
+                    </div>
+                </div>
+
+                <div class="divider">
+                    <span>OR</span>
+                </div>
+
+                <div class="card join-card">
+                    <h2>Receive a File</h2>
+                    <p>Enter a 4-digit room code to connect.</p>
+                    <div class="input-group">
+                        <input type="text" id="input-room-code" placeholder="e.g. 1234" maxlength="4" autocomplete="off">
+                        <button id="btn-join-room" class="btn secondary">Connect</button>
+                    </div>
+                    <p id="join-error" class="error-text hidden"></p>
+                </div>
+            </div>
+
+            <!-- Screen 2: Transfer -->
+            <div id="screen-transfer" class="screen hidden">
+                <div class="status-bar">
+                    <span class="status-indicator connected"></span>
+                    <p>Connected securely to peer in Room: <strong id="active-room-id"></strong></p>
+                </div>
+
+                <div class="dropzone" id="file-dropzone">
+                    <div class="dropzone-content">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <h3>Drag & Drop a file here</h3>
+                        <p>or</p>
+                        <label for="file-input" class="btn primary small">Browse Files</label>
+                        <input type="file" id="file-input" class="hidden" multiple>
+                    </div>
+                </div>
+
+                <div id="transfer-progress-container" class="hidden">
+                    <div class="circular-progress">
+                        <svg width="120" height="120" viewBox="0 0 120 120">
+                            <defs>
+                                <linearGradient id="gradientCircle" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="var(--accent-1)" />
+                                    <stop offset="100%" stop-color="var(--accent-2)" />
+                                </linearGradient>
+                            </defs>
+                            <circle class="progress-bg" cx="60" cy="60" r="50" fill="none" stroke-width="8"></circle>
+                            <circle class="progress-value" id="progress-circle-value" cx="60" cy="60" r="50" fill="none" stroke-width="8" stroke-linecap="round"></circle>
+                        </svg>
+                        <div class="progress-text" id="progress-text-percent">0%</div>
+                    </div>
+                    <p id="transfer-status-text">Sending file...</p>
+                </div>
+
+                <div id="received-files" class="received-files hidden">
+                    <h3>Received Files</h3>
+                    <ul id="file-list"></ul>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- SimplePeer helps manage WebRTC easily, but we'll use vanilla WebRTC APIs directly for minimal dependencies if possible, or Socket.io client -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
